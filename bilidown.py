@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*- 
-
+from __future__ import print_function
 import os
 import re
+import sys
 import time
 import zlib
 import gzip
+import codecs
 import urllib2
 import logging
 import datetime
 import StringIO
+import itertools
+from xml.etree import ElementTree
+
+def XMLNode(tag, *kids, **attrs):
+    n = ElementTree.Element(tag, attrs)
+    for k in kids:
+        if isinstance(k, basestring):
+            assert n.text is None
+            n.text = k
+        else:
+            n.append(k)
+    return n
 
 # deflate support
 # zlib only provides the zlib compress format, not the deflate format;
@@ -39,12 +53,22 @@ def response_decode(response):
         buff = response
     return buff.read()
 
-def getURL(url):
+def getURL0(url):
     headers  = {'Accept':'text/html,application/xhtml+xml,application/xml;', 'Accept-Encoding':'gzip,sdch',}
     request  = urllib2.Request(url=url, headers=headers)
     response = urllib2.urlopen(request)
     result   = response_decode(response)
     return result
+
+def getURL(url):
+    import requests
+    headers  = {'Accept':'text/html,application/xhtml+xml,application/xml;', 'Accept-Encoding':'gzip,sdch',}
+    response = requests.get(url, headers=headers)
+    return response.text
+
+def getTime(comment, prog=re.compile('<d p="([\d.]+),')):
+    try: return float( prog.match(comment).group(1) )
+    except: return 0.0
 
 def readComment(fp):
     clist = []
@@ -56,23 +80,32 @@ def readComment(fp):
     print( 'READ : {} lines'.format(len(clist)) )
     return clist
 
+def parseComment(text):
+    parser = ElementTree.XMLTreeBuilder()
+    parser.feed( text.encode('utf8') )
+    root = parser.close()
+    return root
+
+def mergeComment(root1, root2):
+    root = root1
+    return root
+
 def writeComment(fp, clist):
     fp.seek(0, os.SEEK_SET)
     fp.truncate(0)
-    fp.write( '\n'.join(clist) )
+    fp.write( u'\n'.join(clist) )
     fp.flush()
     print( 'WRITE: {} lines'.format(len(clist)) )
 
 def addComment(clist, data):
     pre_count = len(clist)
-    while len(clist)>0 and clist[-1]=='</i>':
-        clist = clist[:-1]
-    for line in data.replace('</source><d p=', '</source>\n<d p=').split('\n'):
-        text = line.strip()
-        if text not in clist:
-            clist.append( text )
-    if len(clist)>0 and clist[-1]!='</i>':
-        clist.append('</i>')
+    clist2 = data.replace(u'</source><d p=', u'</source>\n<d p=').split(u'\n')
+    clist2_clean = itertools.imap(lambda x: x.strip(), clist2)
+    clist2_comment = set(itertools.ifilter(lambda x: x.startswith(u'<d p='), clist2_clean))
+    clist1_comment = set(itertools.ifilter(lambda x: x.startswith(u'<d p='), clist))
+    clist1_header  = clist[0] if pre_count>0 and clist[0].startswith(u'<?xml') else u'<?xml version="1.0" encoding="UTF-8"?><i>'
+    clist2_header  = clist2[0].strip() if len(clist2)>0 and clist2[0].strip().startswith(u'<?xml') else u''
+    clist = [(clist1_header, clist2_header)[len(clist2_header)>len(clist1_header)],] + sorted(clist1_comment|clist2_comment, key=getTime) + [u'</i>',]
     now_count = len(clist)
     print( 'ADD  : {} lines'.format(now_count-pre_count) )
     return clist
@@ -92,15 +125,21 @@ def avurl2aid(avurl):
     return result
 
 def getXmlURL(avurl):
-    html = getURL( avurl )
-    sobj = re.search('"http://static.hdslb.com/play.swf",\s*"cid=(\d+)&aid=(\d+)"', html)
-    return 'http://comment.bilibili.com/{}.xml'.format(sobj.group(1))
+    try:
+        html = getURL( avurl )
+        sobj = re.search('"http://static.hdslb.com/play.swf",\s*"cid=(\d+)&aid=(\d+)', html)
+        return 'http://comment.bilibili.com/{}.xml'.format(sobj.group(1))
+    except:
+        print('ERROR IN getXmlURL(avurl="{0}")'.format(avurl), file=sys.stderr)
+        print(html)
+        raise
 
 def rollingComment(url):
     urlc = getXmlURL( url )
     File = avurl2aid( url ) + '.xml'
     print( '{} > {}'.format(urlc, File) )
-    with open(File, 'a+') as fp:
+    with codecs.open(File, 'a+', encoding='utf8') as fp:
+    #with open(File, 'a+') as fp:
         for i in range(100):
             clist = readComment(fp)
             data  = getURL(urlc)
@@ -110,4 +149,4 @@ def rollingComment(url):
                 time.sleep(1)
 
 if __name__ == '__main__':
-    rollingComment( 'http://www.bilibili.com/video/av3511392/index_1.html' )
+    rollingComment( 'http://www.bilibili.com/video/av4463044/index_1.html' )
