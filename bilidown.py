@@ -11,6 +11,7 @@ import urllib2
 import logging
 import datetime
 import StringIO
+import argparse
 import itertools
 from xml.etree import ElementTree
 
@@ -65,6 +66,10 @@ def getURL(url):
     headers  = {'Accept':'text/html,application/xhtml+xml,application/xml;', 'Accept-Encoding':'gzip,sdch',}
     response = requests.get(url, headers=headers)
     return response.text
+
+def safe_cast(val, to_type, default=None):
+    try: return to_type(val)
+    except: return default
 
 def getTime(comment, prog=re.compile('<d p="([\d.]+),')):
     try: return float( prog.match(comment).group(1) )
@@ -128,25 +133,50 @@ def getXmlURL(avurl):
     try:
         html = getURL( avurl )
         sobj = re.search('"http://static.hdslb.com/play.swf",\s*"cid=(\d+)&aid=(\d+)', html)
+        if sobj is None:
+            sobj = re.search('bili-cid=(\d+)', html)
         return 'http://comment.bilibili.com/{}.xml'.format(sobj.group(1))
     except:
         print('ERROR IN getXmlURL(avurl="{0}")'.format(avurl), file=sys.stderr)
         print(html)
         raise
 
-def rollingComment(url):
+def rollingComment(url, count=100):
     urlc = getXmlURL( url )
     File = avurl2aid( url ) + '.xml'
     print( '{} > {}'.format(urlc, File) )
     with codecs.open(File, 'a+', encoding='utf8') as fp:
     #with open(File, 'a+') as fp:
-        for i in range(100):
+        for i in range(count):
             clist = readComment(fp)
             data  = getURL(urlc)
             clist = addComment(clist, data)
             writeComment(fp, clist)
-            for i in range(10*60):
+            for i in range(30*60):
                 time.sleep(1)
 
+def genURL(url_in):
+    url_out = url_in
+    for pattern in [b'^(av\d+)(?:#(\d+))?$', b'(av\d+)/(?:index_(\d+).html)?$']:
+        obj = re.search(pattern, url_in)
+        if obj is not None:
+            url_out = 'http://www.bilibili.com/video/{}/index_{}.html'.format(obj.group(1), safe_cast(obj.group(2),int,1))
+            break
+    print(url_out)
+    return url_out
+
+def getopt():
+    parser = argparse.ArgumentParser(description='Download comments from bilibili.')
+    parser.add_argument('url', help='URL of bilibili')
+    parser.add_argument('-c', '--count', type=int, default=100, help='counter (default: 100)')
+    return parser.parse_args()
+
 if __name__ == '__main__':
-    rollingComment( 'http://www.bilibili.com/video/av4463044/index_1.html' )
+    count = 100
+    url   = 'http://www.bilibili.com/video/av4954199/index_1.html'
+    if len(sys.argv)>1:
+       opt = getopt()
+       url = genURL(opt.url)
+       count = opt.count
+    rollingComment(url, count)
+
