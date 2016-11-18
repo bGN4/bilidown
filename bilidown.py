@@ -135,6 +135,7 @@ def getXmlURL(avurl):
         sobj = re.search('"http://static.hdslb.com/play.swf",\s*"cid=(\d+)&aid=(\d+)', html)
         if sobj is None:
             sobj = re.search('bili-cid=(\d+)', html)
+        #print(sobj.groups())
         return 'http://comment.bilibili.com/{}.xml'.format(sobj.group(1))
     except:
         print('ERROR IN getXmlURL(avurl="{0}")'.format(avurl), file=sys.stderr)

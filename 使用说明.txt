@@ -1,0 +1,5 @@
+使用说明：bilidown.py [URL]
+
+例如：bilidown.py http://www.bilibili.com/video/av4954199/index_1.html
+
+改变realtime.py中CID的值，可实时接收最新弹幕。（仅弹幕增长速度肉眼可见的部分视频有效）
