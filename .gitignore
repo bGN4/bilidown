@@ -1,0 +1,10 @@
+.vs
+bak
+*/bin
+*/obj
+*/static
+*.log
+*.bak
+*.pyc
+*.sqlite3
+*.config
