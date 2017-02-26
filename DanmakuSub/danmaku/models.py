@@ -1,14 +1,32 @@
 # -*- coding: utf-8 -*-
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
+from django.db import transaction
 from django.db import models
 from django.contrib.auth.models import User
 
 # Create your models here.
 
 
+def safe_cast(val, to_type, default=None):
+    try: return to_type(val)
+    except: return default
+
+
 class BiliCommentManager(models.Manager):
     use_in_migrations = True
+
+    def get_or_create_by_avid(self, aid, pid=1):
+        now = timezone.now()
+        expire = now + timezone.timedelta(seconds=12*60*60)
+        comment = self.model(cid=0, aid=aid, pid=pid, status='on', count=0, expire=expire, ntime=now)
+        with transaction.atomic():
+            comments = self.filter(aid=aid, pid=pid)[:1]
+            if comments:
+                comment = comments[0]
+            else:
+                comment.save()
+        return comment
 
 class BiliComment(models.Model):
     cid      = models.CharField(max_length=64)

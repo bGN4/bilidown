@@ -1,0 +1,4 @@
+enum==0.4.6
+six==1.10.0
+futures==3.0.5
+requests==2.13.0
