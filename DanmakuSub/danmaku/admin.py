@@ -13,8 +13,8 @@ import re
 
 @admin.register(BiliComment)
 class BiliCommentAdmin(admin.ModelAdmin):
-    list_display = ('id', '_x_url', '_x_cid', 'status', 'count', 'expire', 'ntime', 'atime')
-    list_filter  = ('status', 'expire', 'ntime', 'atime')
+    list_display = ('id', '_x_url', '_x_cid', 'status', 'count', 'expire', 'ltime', 'ntime', 'atime')
+    list_filter  = ('status', 'expire', 'ltime', 'ntime', 'atime')
     formfield_overrides = {
         models.CharField: {'widget': forms.TextInput(attrs={'style':'width:80%; margin-right:10px;'})},
     }

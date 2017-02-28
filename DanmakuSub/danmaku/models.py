@@ -4,13 +4,9 @@ from django.utils import timezone
 from django.db import transaction
 from django.db import models
 from django.contrib.auth.models import User
+from common.utils import safe_cast
 
 # Create your models here.
-
-
-def safe_cast(val, to_type, default=None):
-    try: return to_type(val)
-    except: return default
 
 
 class BiliCommentManager(models.Manager):
@@ -19,7 +15,7 @@ class BiliCommentManager(models.Manager):
     def get_or_create_by_avid(self, aid, pid=1):
         now = timezone.now()
         expire = now + timezone.timedelta(seconds=12*60*60)
-        comment = self.model(cid=0, aid=aid, pid=pid, status='on', count=0, expire=expire, ntime=now)
+        comment = self.model(cid=0, aid=aid, pid=pid, status='on', count=0, expire=expire, ltime='1970-1-1', ntime=now)
         with transaction.atomic():
             comments = self.filter(aid=aid, pid=pid)[:1]
             if comments:
@@ -35,6 +31,7 @@ class BiliComment(models.Model):
     status   = models.CharField(max_length=64)
     count    = models.IntegerField(default=0)
     expire   = models.DateTimeField()
+    ltime    = models.DateTimeField()
     ntime    = models.DateTimeField()
     atime    = models.DateTimeField(auto_now_add=True)
     objects  = BiliCommentManager()
