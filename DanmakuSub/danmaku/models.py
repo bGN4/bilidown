@@ -20,6 +20,10 @@ class BiliCommentManager(models.Manager):
             comments = self.filter(aid=aid, pid=pid)[:1]
             if comments:
                 comment = comments[0]
+                comment.status = 'on'
+                comment.expire = expire
+                comment.ntime = now
+                comment.save()
             else:
                 comment.save()
         return comment

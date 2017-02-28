@@ -34,7 +34,7 @@ class BiliCommentAdmin(admin.ModelAdmin):
 
 @admin.register(BiliRecord)
 class BiliRecordAdmin(admin.ModelAdmin):
-    list_display = ('url', 'status', 'atime')
+    list_display = ('url', '_x_count', 'status', 'atime')
     exclude = ('status', 'comment', 'user', 'deleted')
     list_filter  = ('status', 'atime')
     formfield_overrides = {
@@ -43,6 +43,11 @@ class BiliRecordAdmin(admin.ModelAdmin):
 
     class Media:
         js = ()
+
+    def _x_count(self, obj):
+        return '<a href="{url}" target="_blank">{text}</a>'.format(url='#', text=obj.comment.count)
+    _x_count.short_description = 'count'
+    _x_count.allow_tags = True
 
     def save_model(self, request, obj, form, change):
         (url, aid, pid) = (None, None, None)
@@ -60,6 +65,10 @@ class BiliRecordAdmin(admin.ModelAdmin):
         obj.comment = BiliComment.objects.get_or_create_by_avid(aid=aid, pid=pid)
         obj.status = 'track'
         obj.user = request.user
+        record = BiliRecord.objects.filter(user_id=obj.user.id,comment_id=obj.comment.pk).first()
+        if record and record.pk!=obj.pk:
+            self.message_user(request, "Duplicate record %s"%obj.url, level=messages.WARNING)
+            return
         obj.save()
 
     def delete_model(self, request, obj):

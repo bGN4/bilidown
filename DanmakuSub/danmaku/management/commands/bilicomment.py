@@ -24,12 +24,16 @@ class Command(BaseCommand):
             self.stdout.write('%-50s'%('\rMark %s rows as expired.'%num))
         output = options.get('output', '')
         comments = BiliComment.objects.filter(status="on",ntime__lt=now).values('id','cid','aid','pid','ltime')
+        total = comments.count()
         if not isStringLike(output):
             pass
         elif os.path.isdir(output):
-            for comment in comments:
+            for (i,comment) in enumerate(comments,1):
                 path = os.path.join(output, 'av{aid}#{pid}.txt'.format(**comment))
-                if not os.path.isfile(path):
+                if os.path.isfile(path):
+                    self.stdout.write( 'Skip {}/{} to {}'.format(i,total,path) )
+                else:
+                    self.stdout.write( 'Dump {}/{} to {}'.format(i,total,path) )
                     with open(path, 'w') as fp:
                         fp.write( json.dumps(comment, ensure_ascii=False, cls=JSONEncoder, indent=1, separators=(',', ': ')) )
         else:
@@ -37,6 +41,7 @@ class Command(BaseCommand):
             if output in ('-', ''):
                 self.stdout.write( text )
             else:
+                self.stdout.write( 'Dump {} comments to {}'.format(total,output) )
                 with open(output, 'w') as fp:
                     fp.write( text )
 

@@ -25,7 +25,7 @@ class Const:
     DEBUG_LOGGER = 'django.logdebug'
     SESSION_COOKIE_SECURE   = False #True
     SECURE_PROXY_SSL_HEADER = None  #('HTTP_X_FORWARDED_PROTOCOL', 'https')
-    if sys.platform == 'win32': # for my PC
+    if 'server' not in platform.release().lower(): # for my PC
         SET_IS_DEBUG = True
         SESSION_COOKIE_SECURE = False
         SECURE_PROXY_SSL_HEADER = None
